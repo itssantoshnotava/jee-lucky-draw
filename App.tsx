@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Subject, AppState, Chapter, Priority } from './types';
 import { PREDEFINED_CHAPTERS } from './constants';
 import SubjectCard from './components/SubjectCard';
 import LuckyDrawModal from './components/LuckyDrawModal';
 
-const STORAGE_KEY = 'jee_lucky_draw_state_v4_final';
+const STORAGE_KEY = 'jee_lucky_draw_state_mobile_v1';
 
 type DrawSource = { type: 'subject'; subject: Subject; filter: Priority | 'All' } | { type: 'pcm'; filter: Priority | 'All' };
 
@@ -14,27 +13,7 @@ const App: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        const subjects: Subject[] = ['Physics', 'Mathematics', 'Chemistry'];
-        const allChapters: Record<Subject, Chapter[]> = { 
-          Physics: [...PREDEFINED_CHAPTERS.Physics], 
-          Mathematics: [...PREDEFINED_CHAPTERS.Mathematics], 
-          Chemistry: [...PREDEFINED_CHAPTERS.Chemistry] 
-        };
-        const completedChapters: Record<Subject, string[]> = { Physics: [], Mathematics: [], Chemistry: [] };
-
-        subjects.forEach(s => {
-          if (parsed.allChapters && Array.isArray(parsed.allChapters[s])) {
-            allChapters[s] = parsed.allChapters[s].map((item: any) => 
-              typeof item === 'string' ? { name: item, priority: 'Medium' } : item
-            );
-          }
-          if (parsed.completedChapters && Array.isArray(parsed.completedChapters[s])) {
-            completedChapters[s] = parsed.completedChapters[s];
-          }
-        });
-
-        return { allChapters, completedChapters };
+        return JSON.parse(saved);
       } catch (e) {
         console.error("Error parsing saved state", e);
       }
@@ -58,6 +37,7 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  // Click outside listener
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -78,43 +58,14 @@ const App: React.FC = () => {
     });
   }, []);
 
-  const resetSubjectProgress = useCallback((subject: Subject) => {
-    if (window.confirm(`Reset progress for ${subject}?`)) {
-      setState(prev => ({ ...prev, completedChapters: { ...prev.completedChapters, [subject]: [] } }));
-    }
-  }, []);
-
-  const addChapter = useCallback((subject: Subject, chapter: Chapter) => {
-    setState(prev => {
-      if (prev.allChapters[subject].some(c => c.name === chapter.name)) {
-        alert("Already exists!");
-        return prev;
-      }
-      return { ...prev, allChapters: { ...prev.allChapters, [subject]: [...prev.allChapters[subject], chapter] } };
-    });
-  }, []);
-
-  const deleteChapter = useCallback((subject: Subject, chapterName: string) => {
-    setState(prev => ({
-      ...prev,
-      allChapters: { ...prev.allChapters, [subject]: prev.allChapters[subject].filter(c => c.name !== chapterName) },
-      completedChapters: { ...prev.completedChapters, [subject]: prev.completedChapters[subject].filter(c => c !== chapterName) }
-    }));
-  }, []);
-
-  const restoreDefaults = useCallback((subject: Subject) => {
-    if (window.confirm(`Restore ${subject} list?`)) {
-      setState(prev => ({ ...prev, allChapters: { ...prev.allChapters, [subject]: [...PREDEFINED_CHAPTERS[subject]] } }));
-    }
-  }, []);
-
   const handleDrawSubject = useCallback((subject: Subject, filterPriority: Priority | 'All' = 'All') => {
     const all = state.allChapters[subject] || [];
     const completed = state.completedChapters[subject] || [];
     let remaining = all.filter(c => !completed.includes(c.name));
     if (filterPriority !== 'All') remaining = remaining.filter(c => c.priority === filterPriority);
+    
     if (remaining.length === 0) {
-      alert(`No remaining ${filterPriority !== 'All' ? filterPriority : ''} chapters.`);
+      alert(`No remaining ${filterPriority !== 'All' ? filterPriority : ''} chapters in ${subject}.`);
       return;
     }
     const randomIndex = Math.floor(Math.random() * remaining.length);
@@ -130,24 +81,15 @@ const App: React.FC = () => {
         if (filter === 'All' || c.priority === filter) pool.push({ subject: s, chapter: c });
       });
     });
+    
     if (pool.length === 0) {
-      alert(`No matching chapters found.`);
+      alert(`No matching chapters found across PCM.`);
       return;
     }
     const randomIndex = Math.floor(Math.random() * pool.length);
     setActiveDraw({ ...pool[randomIndex], source: { type: 'pcm', filter } });
+    setIsPcmDropdownOpen(false);
   }, [state]);
-
-  const handleRedraw = useCallback(() => {
-    if (!activeDraw) return;
-    activeDraw.source.type === 'subject' ? handleDrawSubject(activeDraw.source.subject, activeDraw.source.filter) : handleDrawPCM(activeDraw.source.filter);
-  }, [activeDraw, handleDrawSubject, handleDrawPCM]);
-
-  const handleCompleteFromDraw = useCallback(() => {
-    if (!activeDraw) return;
-    toggleChapter(activeDraw.subject, activeDraw.chapter.name);
-    setActiveDraw(null);
-  }, [activeDraw, toggleChapter]);
 
   const totals = useMemo(() => {
     let total = 0, done = 0;
@@ -158,76 +100,82 @@ const App: React.FC = () => {
     return { total, done, percent: total > 0 ? Math.round((done / total) * 100) : 0 };
   }, [state]);
 
-  const filterLabels = { 'All': 'EVERYTHING', 'High': 'HIGH ONLY', 'Medium': 'MEDIUM ONLY', 'Low': 'LOW ONLY' };
+  const filterLabels = { 'All': 'EVERYTHING', 'High': 'HIGH PRIORITY', 'Medium': 'MEDIUM PRIORITY', 'Low': 'LOW PRIORITY' };
 
   return (
-    <div className="min-h-screen pb-20 selection:bg-indigo-100">
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 transition-all">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-200">
-              <span className="text-white font-black text-lg">J</span>
-            </div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">JEE Lucky Draw</h1>
+    <div className="min-h-screen bg-[#FDFDFF] text-slate-900 pb-12 overflow-x-hidden">
+      {/* Dynamic Header */}
+      <header className="bg-white/70 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-50 px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
+             <span className="text-white font-black text-xl italic">J</span>
           </div>
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-600 bg-slate-100/80 px-4 py-2 rounded-full border border-slate-200">
-            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-            Total Syllabus Progress: {totals.done}/{totals.total} ({totals.percent}%)
+          <div className="hidden sm:block">
+            <h1 className="text-lg font-black tracking-tighter uppercase">JEE Lucky Draw</h1>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Aspirant Tool</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+            <span className="text-[11px] md:text-xs font-black text-slate-600 uppercase tracking-wider">
+              {totals.done}/{totals.total} <span className="hidden sm:inline">COMPLETED</span> ({totals.percent}%)
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 mt-10 md:mt-14">
-        {/* Total Syllabus Draw Section */}
-        <section className="mb-14 relative group">
-          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-indigo-200 flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-            {/* Background Blobs Layer */}
-            <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] pointer-events-none">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-32 -mt-32 blur-[100px]" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/20 rounded-full -ml-20 -mb-20 blur-[80px]" />
+      <main className="max-w-7xl mx-auto px-4 md:px-6 pt-6 md:pt-10">
+        
+        {/* PCM Draw Hero - Optimized for Mobile */}
+        <section className="mb-10 md:mb-16">
+          <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl shadow-slate-200">
+            {/* Background Texture */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none">
+              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500 rounded-full blur-[120px]" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-violet-600 rounded-full blur-[100px]" />
             </div>
 
-            <div className="relative z-20 text-center md:text-left flex-1">
-              <h2 className="text-4xl font-black mb-3 tracking-tight">Total Syllabus Draw</h2>
-              <p className="text-indigo-100/80 max-w-lg text-lg font-medium leading-relaxed">
-                The quickest way to start. Pick a random chapter from all three subjects combined using your chosen priority filter.
+            <div className="relative z-10 text-center lg:text-left">
+              <h2 className="text-3xl md:text-5xl lg:text-6xl font-black mb-4 tracking-tighter leading-none">
+                Total Syllabus <span className="text-indigo-400">Draw</span>
+              </h2>
+              <p className="text-slate-400 max-w-md mx-auto lg:mx-0 text-sm md:text-base font-medium leading-relaxed">
+                Need to start somewhere? Let the system pick a random chapter from all three subjects based on your current focus.
               </p>
             </div>
 
-            <div className="relative z-20 flex flex-col sm:flex-row items-stretch gap-4 bg-white/10 p-3 rounded-3xl backdrop-blur-xl border border-white/20 shadow-inner min-w-[320px] md:min-w-[480px]">
-              {/* Custom Dropdown Container - Fixed clipping by moving overflow constraints */}
-              <div className="relative flex-1" ref={dropdownRef}>
+            <div className="relative z-20 w-full lg:w-auto flex flex-col sm:flex-row gap-3 md:gap-4" ref={dropdownRef}>
+              {/* Refined Dropdown Trigger */}
+              <div className="relative flex-1 sm:min-w-[240px]">
                 <button 
                   onClick={() => setIsPcmDropdownOpen(!isPcmDropdownOpen)}
-                  className="flex items-center justify-between w-full h-16 px-6 bg-white/10 hover:bg-white/20 transition-all rounded-2xl border border-white/20 group"
+                  className="w-full h-14 md:h-16 px-6 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl flex items-center justify-between transition-all group active-scale"
                 >
                   <div className="flex flex-col items-start">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200 opacity-90 leading-none mb-1.5">Focus:</span>
-                    <span className="text-sm font-black tracking-widest uppercase">{filterLabels[pcmDrawFilter]}</span>
+                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Focus</span>
+                    <span className="text-sm font-bold uppercase tracking-wide">{filterLabels[pcmDrawFilter]}</span>
                   </div>
-                  <svg className={`w-5 h-5 text-white transition-transform duration-300 ease-out ${isPcmDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+                  <svg className={`w-5 h-5 text-white/50 transition-transform ${isPcmDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
+                {/* The "Safe" Dropdown - Higher Z-index, explicit positioning */}
                 {isPcmDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-3 bg-white rounded-3xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] overflow-hidden z-[100] dropdown-animate border border-slate-100 p-2 min-w-[240px]">
+                  <div className="absolute top-[110%] left-0 right-0 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-100 p-1.5 z-[100] animate-slide-up origin-top">
                     {(Object.keys(filterLabels) as (keyof typeof filterLabels)[]).map((key) => (
                       <button
                         key={key}
-                        onClick={() => { setPcmDrawFilter(key); setIsPcmDropdownOpen(false); }}
-                        className={`w-full text-left px-5 py-4 text-[11px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all duration-200 ${
-                            pcmDrawFilter === key 
-                            ? 'text-indigo-600 bg-indigo-50 shadow-sm' 
-                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                        onClick={() => { setPcmDrawFilter(key); handleDrawPCM(key); }}
+                        className={`w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all mb-1 last:mb-0 ${
+                          pcmDrawFilter === key 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                            {filterLabels[key]}
-                            {pcmDrawFilter === key && (
-                                <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                            )}
-                        </div>
+                        {filterLabels[key]}
                       </button>
                     ))}
                   </div>
@@ -236,15 +184,16 @@ const App: React.FC = () => {
 
               <button 
                 onClick={() => handleDrawPCM(pcmDrawFilter)}
-                className="bg-white text-indigo-700 px-10 h-16 rounded-2xl font-black text-lg hover:shadow-[0_20px_40px_rgba(255,255,255,0.2)] hover:-translate-y-0.5 transition-all active:scale-95 shadow-xl shadow-black/5"
+                className="h-14 md:h-16 px-10 bg-white text-slate-900 rounded-2xl font-black text-base md:text-lg hover:bg-indigo-50 transition-all active-scale shadow-xl shadow-black/20 flex items-center justify-center gap-2 whitespace-nowrap"
               >
-                Draw from PCM
+                Roll Dice 🎲
               </button>
             </div>
           </div>
         </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Subject Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
           {(['Physics', 'Mathematics', 'Chemistry'] as Subject[]).map(subject => (
             <SubjectCard
               key={subject}
@@ -253,32 +202,61 @@ const App: React.FC = () => {
               completed={state.completedChapters[subject] || []}
               onDraw={handleDrawSubject}
               onToggleChapter={toggleChapter}
-              onReset={resetSubjectProgress}
-              onAddChapter={addChapter}
-              onDeleteChapter={deleteChapter}
-              onRestoreDefaults={restoreDefaults}
+              onReset={(s) => {
+                if(window.confirm(`Reset all progress for ${s}?`)) {
+                    setState(prev => ({ ...prev, completedChapters: { ...prev.completedChapters, [s]: [] } }));
+                }
+              }}
+              onAddChapter={(s, ch) => {
+                  setState(prev => {
+                      if (prev.allChapters[s].some(c => c.name === ch.name)) return prev;
+                      return { ...prev, allChapters: { ...prev.allChapters, [s]: [...prev.allChapters[s], ch] } };
+                  });
+              }}
+              onDeleteChapter={(s, name) => {
+                  setState(prev => ({
+                    ...prev,
+                    allChapters: { ...prev.allChapters, [s]: prev.allChapters[s].filter(c => c.name !== name) },
+                    completedChapters: { ...prev.completedChapters, [s]: prev.completedChapters[s].filter(c => c !== name) }
+                  }));
+              }}
+              onRestoreDefaults={(s) => {
+                  if(window.confirm(`Restore default chapter list for ${s}?`)) {
+                      setState(prev => ({ ...prev, allChapters: { ...prev.allChapters, [s]: [...PREDEFINED_CHAPTERS[s]] } }));
+                  }
+              }}
             />
           ))}
         </div>
       </main>
+
+      <footer className="mt-20 px-4 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+          </svg>
+          Local Sync Enabled
+        </div>
+        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Persistence is the key to success</p>
+        <h3 className="mt-4 font-black text-slate-800 text-3xl tracking-tighter italic">PADHAI KARLE BKL!</h3>
+      </footer>
 
       {activeDraw && (
         <LuckyDrawModal
           subject={activeDraw.subject}
           chapter={activeDraw.chapter}
           onClose={() => setActiveDraw(null)}
-          onComplete={handleCompleteFromDraw}
-          onRedraw={handleRedraw}
+          onComplete={() => {
+              toggleChapter(activeDraw.subject, activeDraw.chapter.name);
+              setActiveDraw(null);
+          }}
+          onRedraw={() => {
+              activeDraw.source.type === 'subject' 
+                ? handleDrawSubject(activeDraw.source.subject, activeDraw.source.filter)
+                : handleDrawPCM(activeDraw.source.filter);
+          }}
         />
       )}
-
-      <footer className="max-w-7xl mx-auto px-4 mt-20 text-center">
-        <div className="inline-block px-6 py-2 bg-slate-100 rounded-full text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mb-4">
-          Local Storage Persistence Active
-        </div>
-        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">KYA SCROLL KAR RAHA HEIN NICHE PADH NA JAAKE LODU</p>
-        <p className="mt-3 font-black text-slate-800 text-lg italic tracking-tighter">PADHAI KARLE BKL</p>
-      </footer>
     </div>
   );
 };

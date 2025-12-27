@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Subject, Chapter } from '../types';
-import { SUBJECT_COLORS, PRIORITY_COLORS } from '../constants';
+import { SUBJECT_COLORS } from '../constants';
 
 interface LuckyDrawModalProps {
   subject: Subject;
@@ -23,7 +22,7 @@ const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({
   useEffect(() => {
     if (chapter) {
       setIsAnimating(true);
-      const timer = setTimeout(() => setIsAnimating(false), 800);
+      const timer = setTimeout(() => setIsAnimating(false), 1200);
       return () => clearTimeout(timer);
     }
   }, [chapter]);
@@ -31,54 +30,59 @@ const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({
   if (!chapter) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
-        <div className={`h-2 ${SUBJECT_COLORS[subject]}`} />
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up">
+        <div className={`h-3 ${SUBJECT_COLORS[subject]}`} />
         
-        <div className="p-8 text-center">
-          <p className="text-slate-500 uppercase tracking-widest text-sm font-semibold mb-2">
-            Target Locked: {subject}
+        <div className="p-8 md:p-12 text-center">
+          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em] mb-4">
+            New Study Target: {subject}
           </p>
           
-          <div className="min-h-[160px] flex flex-col items-center justify-center py-6">
+          <div className="min-h-[200px] flex flex-col items-center justify-center">
             {isAnimating ? (
-              <div className="flex flex-col items-center">
-                <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-400 font-medium text-lg">Shuffling {subject}...</p>
+              <div className="flex flex-col items-center gap-6">
+                <div className="w-16 h-16 border-[6px] border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                <h3 className="text-xl font-black italic text-slate-300 uppercase tracking-tighter">Choosing Wisely...</h3>
               </div>
             ) : (
-              <>
-                <div className={`mb-4 px-3 py-1 rounded-full text-xs font-bold uppercase border ${PRIORITY_COLORS[chapter.priority]}`}>
+              <div className="animate-fade-in">
+                <div className={`mb-4 inline-block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 ${
+                    chapter.priority === 'High' ? 'text-rose-600 border-rose-100 bg-rose-50' : 
+                    chapter.priority === 'Medium' ? 'text-amber-600 border-amber-100 bg-amber-50' : 
+                    'text-indigo-600 border-indigo-100 bg-indigo-50'
+                }`}>
                   {chapter.priority} Priority
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-slate-800 leading-tight">
+                <h2 className="text-3xl md:text-5xl font-black text-slate-900 leading-[1.1] tracking-tighter mb-4">
                   {chapter.name}
                 </h2>
-              </>
+                <div className="h-1 w-12 bg-indigo-600 mx-auto rounded-full" />
+              </div>
             )}
           </div>
 
           {!isAnimating && (
-            <div className="space-y-3 mt-8">
+            <div className="space-y-4 mt-10">
               <button
                 onClick={onComplete}
-                className="w-full py-4 px-6 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors shadow-lg"
+                className="w-full h-16 bg-slate-900 text-white rounded-2xl font-black text-lg uppercase tracking-widest hover:bg-black transition-all active-scale shadow-2xl shadow-indigo-200"
               >
-                Mark as Completed
+                Mark as Done ✅
               </button>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={onRedraw}
-                  className="py-3 px-4 border-2 border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors"
+                  className="h-14 border-2 border-slate-100 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all active-scale"
                 >
-                  Redraw
+                  Redraw 🎲
                 </button>
                 <button
                   onClick={onClose}
-                  className="py-3 px-4 border-2 border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors"
+                  className="h-14 border-2 border-slate-100 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all active-scale"
                 >
-                  Maybe Later
+                  Close
                 </button>
               </div>
             </div>
