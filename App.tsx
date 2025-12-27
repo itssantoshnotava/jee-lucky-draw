@@ -104,7 +104,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFDFF] text-slate-900 pb-12 overflow-x-hidden">
-      {/* Dynamic Header */}
       <header className="bg-white/70 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-50 px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
@@ -128,54 +127,56 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 pt-6 md:pt-10">
         
-        {/* PCM Draw Hero - Optimized for Mobile */}
-        <section className="mb-10 md:mb-16">
-          <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl shadow-slate-200">
-            {/* Background Texture */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none">
-              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500 rounded-full blur-[120px]" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-violet-600 rounded-full blur-[100px]" />
+        {/* PCM Draw Hero */}
+        <section className="mb-10 md:mb-16 relative">
+          <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl shadow-slate-200 overflow-visible">
+            
+            {/* Background Texture Layer (Separated to allow overflow-visible on parent) */}
+            <div className="absolute inset-0 rounded-[2rem] md:rounded-[3rem] overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/30 rounded-full blur-[120px]" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-violet-600/30 rounded-full blur-[100px]" />
             </div>
 
-            <div className="relative z-10 text-center lg:text-left">
+            <div className="relative z-10 text-center lg:text-left flex-1">
               <h2 className="text-3xl md:text-5xl lg:text-6xl font-black mb-4 tracking-tighter leading-none">
                 Total Syllabus <span className="text-indigo-400">Draw</span>
               </h2>
               <p className="text-slate-400 max-w-md mx-auto lg:mx-0 text-sm md:text-base font-medium leading-relaxed">
-                Need to start somewhere? Let the system pick a random chapter from all three subjects based on your current focus.
+                Roll for a random chapter across all PCM subjects. Filter by your current study priority.
               </p>
             </div>
 
-            <div className="relative z-20 w-full lg:w-auto flex flex-col sm:flex-row gap-3 md:gap-4" ref={dropdownRef}>
-              {/* Refined Dropdown Trigger */}
-              <div className="relative flex-1 sm:min-w-[240px]">
+            <div className="relative z-20 w-full lg:w-auto flex flex-col sm:flex-row gap-3 md:gap-4 items-stretch" ref={dropdownRef}>
+              <div className="relative flex-1 sm:min-w-[260px]">
+                {/* Refined Dropdown Trigger */}
                 <button 
                   onClick={() => setIsPcmDropdownOpen(!isPcmDropdownOpen)}
-                  className="w-full h-14 md:h-16 px-6 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl flex items-center justify-between transition-all group active-scale"
+                  className={`w-full h-16 px-6 bg-white/5 hover:bg-white/10 border transition-all rounded-2xl flex items-center justify-between group active-scale ${isPcmDropdownOpen ? 'border-indigo-500/50 bg-white/10' : 'border-white/10'}`}
                 >
                   <div className="flex flex-col items-start">
-                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Focus</span>
-                    <span className="text-sm font-bold uppercase tracking-wide">{filterLabels[pcmDrawFilter]}</span>
+                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Current Filter</span>
+                    <span className="text-sm font-bold uppercase tracking-wide truncate">{filterLabels[pcmDrawFilter]}</span>
                   </div>
-                  <svg className={`w-5 h-5 text-white/50 transition-transform ${isPcmDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={`w-5 h-5 text-white/50 transition-transform duration-300 ${isPcmDropdownOpen ? 'rotate-180 text-white' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
-                {/* The "Safe" Dropdown - Higher Z-index, explicit positioning */}
+                {/* The Improved Dropdown Menu */}
                 {isPcmDropdownOpen && (
-                  <div className="absolute top-[110%] left-0 right-0 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-100 p-1.5 z-[100] animate-slide-up origin-top">
+                  <div className="absolute top-[calc(100%+10px)] left-0 right-0 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-200 p-1.5 z-[100] animate-dropdown">
                     {(Object.keys(filterLabels) as (keyof typeof filterLabels)[]).map((key) => (
                       <button
                         key={key}
-                        onClick={() => { setPcmDrawFilter(key); handleDrawPCM(key); }}
-                        className={`w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all mb-1 last:mb-0 ${
+                        onClick={() => { setPcmDrawFilter(key); setIsPcmDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-3.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all mb-1 last:mb-0 flex items-center justify-between group/item ${
                           pcmDrawFilter === key 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
+                          : 'hover:bg-slate-50 text-slate-500 hover:text-indigo-600'
                         }`}
                       >
                         {filterLabels[key]}
+                        {pcmDrawFilter === key && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
                       </button>
                     ))}
                   </div>
@@ -184,9 +185,9 @@ const App: React.FC = () => {
 
               <button 
                 onClick={() => handleDrawPCM(pcmDrawFilter)}
-                className="h-14 md:h-16 px-10 bg-white text-slate-900 rounded-2xl font-black text-base md:text-lg hover:bg-indigo-50 transition-all active-scale shadow-xl shadow-black/20 flex items-center justify-center gap-2 whitespace-nowrap"
+                className="h-16 px-10 bg-indigo-600 text-white rounded-2xl font-black text-base md:text-lg hover:bg-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/40 transition-all active-scale shadow-xl shadow-black/20 flex items-center justify-center gap-3 whitespace-nowrap"
               >
-                Roll Dice 🎲
+                Draw from PCM <span className="text-xl">🍀</span>
               </button>
             </div>
           </div>
@@ -235,7 +236,7 @@ const App: React.FC = () => {
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
           </svg>
-          Local Sync Enabled
+          PROGRESS SYNCED
         </div>
         <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Persistence is the key to success</p>
         <h3 className="mt-4 font-black text-slate-800 text-3xl tracking-tighter italic">PADHAI KARLE BKL!</h3>
