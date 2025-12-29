@@ -4,7 +4,8 @@ import { PREDEFINED_CHAPTERS } from './constants';
 import SubjectCard from './components/SubjectCard';
 import LuckyDrawModal from './components/LuckyDrawModal';
 
-const STORAGE_KEY = 'jee_lucky_draw_state_mobile_v1';
+const STORAGE_KEY = 'jee_lucky_draw_state_v3';
+const THEME_KEY = 'jee_lucky_draw_theme_v3';
 
 type DrawSource = { type: 'subject'; subject: Subject; filter: Priority | 'All' } | { type: 'pcm'; filter: Priority | 'All' };
 
@@ -15,7 +16,7 @@ const App: React.FC = () => {
       try {
         return JSON.parse(saved);
       } catch (e) {
-        console.error("Error parsing saved state", e);
+        console.error("Error parsing state", e);
       }
     }
     return {
@@ -28,6 +29,11 @@ const App: React.FC = () => {
     };
   });
 
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    return (savedTheme as 'light' | 'dark') || 'light';
+  });
+
   const [activeDraw, setActiveDraw] = useState<{ subject: Subject; chapter: Chapter; source: DrawSource } | null>(null);
   const [pcmDrawFilter, setPcmDrawFilter] = useState<Priority | 'All'>('All');
   const [isPcmDropdownOpen, setIsPcmDropdownOpen] = useState(false);
@@ -37,7 +43,17 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  // Click outside listener
+  // Handle Theme Switching Robustly
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -47,6 +63,8 @@ const App: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const toggleChapter = useCallback((subject: Subject, chapterName: string) => {
     setState(prev => {
@@ -83,7 +101,7 @@ const App: React.FC = () => {
     });
     
     if (pool.length === 0) {
-      alert(`No matching chapters found across PCM.`);
+      alert(`No matching chapters found.`);
       return;
     }
     const randomIndex = Math.floor(Math.random() * pool.length);
@@ -103,23 +121,36 @@ const App: React.FC = () => {
   const filterLabels = { 'All': 'EVERYTHING', 'High': 'HIGH PRIORITY', 'Medium': 'MEDIUM PRIORITY', 'Low': 'LOW PRIORITY' };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFF] text-slate-900 pb-12 overflow-x-hidden">
-      <header className="bg-white/70 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-50 px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
+    <div className="min-h-screen bg-[#FDFDFF] dark:bg-[#020617] text-slate-900 dark:text-slate-100 pb-20 transition-all duration-500">
+      {/* Header */}
+      <header className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 sticky top-0 z-[100] px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
              <span className="text-white font-black text-xl italic">J</span>
           </div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-black tracking-tighter uppercase">JEE Lucky Draw</h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Aspirant Tool</p>
+          <div className="flex flex-col">
+            <h1 className="text-base md:text-lg font-black tracking-tighter uppercase leading-none mb-0.5">JEE Lucky Draw</h1>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">Aspirant Tool</p>
           </div>
         </div>
 
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            <span className="text-[11px] md:text-xs font-black text-slate-600 uppercase tracking-wider">
-              {totals.done}/{totals.total} <span className="hidden sm:inline">COMPLETED</span> ({totals.percent}%)
+        <div className="flex items-center gap-2 md:gap-4">
+          <button 
+            onClick={toggleTheme}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-white dark:hover:bg-slate-800 transition-all active-scale"
+            aria-label="Toggle Theme"
+          >
+            {theme === 'light' ? (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            )}
+          </button>
+          
+          <div className="bg-slate-100 dark:bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 shadow-sm">
+            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+            <span className="text-[10px] md:text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+              {totals.done}/{totals.total} <span className="hidden sm:inline">COMPLETE</span> ({totals.percent}%)
             </span>
           </div>
         </div>
@@ -127,74 +158,73 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 pt-6 md:pt-10">
         
-        {/* PCM Draw Hero */}
-        <section className="mb-10 md:mb-16 relative">
-          <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 text-white relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl shadow-slate-200 overflow-visible">
+        {/* PCM Hero */}
+        <section className="mb-12 relative">
+          <div className="bg-slate-900 dark:bg-slate-900/40 rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-14 text-white relative z-[50] border border-white/5 dark:border-white/10 shadow-2xl overflow-visible">
             
-            {/* Background Texture Layer (Separated to allow overflow-visible on parent) */}
-            <div className="absolute inset-0 rounded-[2rem] md:rounded-[3rem] overflow-hidden pointer-events-none z-0">
-              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/30 rounded-full blur-[120px]" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-violet-600/30 rounded-full blur-[100px]" />
+            <div className="absolute inset-0 rounded-[2.5rem] md:rounded-[4rem] overflow-hidden pointer-events-none z-0">
+              <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/20 rounded-full blur-[120px]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-transparent opacity-90" />
             </div>
 
-            <div className="relative z-10 text-center lg:text-left flex-1">
-              <h2 className="text-3xl md:text-5xl lg:text-6xl font-black mb-4 tracking-tighter leading-none">
-                Total Syllabus <span className="text-indigo-400">Draw</span>
-              </h2>
-              <p className="text-slate-400 max-w-md mx-auto lg:mx-0 text-sm md:text-base font-medium leading-relaxed">
-                Roll for a random chapter across all PCM subjects. Filter by your current study priority.
-              </p>
-            </div>
-
-            <div className="relative z-20 w-full lg:w-auto flex flex-col sm:flex-row gap-3 md:gap-4 items-stretch" ref={dropdownRef}>
-              <div className="relative flex-1 sm:min-w-[260px]">
-                {/* Refined Dropdown Trigger */}
-                <button 
-                  onClick={() => setIsPcmDropdownOpen(!isPcmDropdownOpen)}
-                  className={`w-full h-16 px-6 bg-white/5 hover:bg-white/10 border transition-all rounded-2xl flex items-center justify-between group active-scale ${isPcmDropdownOpen ? 'border-indigo-500/50 bg-white/10' : 'border-white/10'}`}
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Current Filter</span>
-                    <span className="text-sm font-bold uppercase tracking-wide truncate">{filterLabels[pcmDrawFilter]}</span>
-                  </div>
-                  <svg className={`w-5 h-5 text-white/50 transition-transform duration-300 ${isPcmDropdownOpen ? 'rotate-180 text-white' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {/* The Improved Dropdown Menu */}
-                {isPcmDropdownOpen && (
-                  <div className="absolute top-[calc(100%+10px)] left-0 right-0 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-200 p-1.5 z-[100] animate-dropdown">
-                    {(Object.keys(filterLabels) as (keyof typeof filterLabels)[]).map((key) => (
-                      <button
-                        key={key}
-                        onClick={() => { setPcmDrawFilter(key); setIsPcmDropdownOpen(false); }}
-                        className={`w-full text-left px-4 py-3.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all mb-1 last:mb-0 flex items-center justify-between group/item ${
-                          pcmDrawFilter === key 
-                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
-                          : 'hover:bg-slate-50 text-slate-500 hover:text-indigo-600'
-                        }`}
-                      >
-                        {filterLabels[key]}
-                        {pcmDrawFilter === key && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
+              <div className="text-center lg:text-left">
+                <h2 className="text-4xl md:text-7xl font-black mb-4 tracking-tighter leading-none">
+                  Total Syllabus <span className="text-indigo-400">Draw</span>
+                </h2>
+                <p className="text-slate-400 max-w-md mx-auto lg:mx-0 text-base md:text-lg">
+                  Pick a random chapter from all PCM subjects based on your priority.
+                </p>
               </div>
 
-              <button 
-                onClick={() => handleDrawPCM(pcmDrawFilter)}
-                className="h-16 px-10 bg-indigo-600 text-white rounded-2xl font-black text-base md:text-lg hover:bg-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/40 transition-all active-scale shadow-xl shadow-black/20 flex items-center justify-center gap-3 whitespace-nowrap"
-              >
-                Draw from PCM <span className="text-xl">🍀</span>
-              </button>
+              <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-4 bg-black/20 p-4 rounded-[2.5rem] border border-white/10 backdrop-blur-xl relative" ref={dropdownRef}>
+                <div className="relative flex-1 sm:min-w-[280px]">
+                  <button 
+                    onClick={() => setIsPcmDropdownOpen(!isPcmDropdownOpen)}
+                    className={`w-full h-16 px-6 bg-white/5 hover:bg-white/10 border transition-all rounded-2xl flex items-center justify-between active-scale ${isPcmDropdownOpen ? 'border-indigo-400 bg-white/10' : 'border-white/10'}`}
+                  >
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1.5">Focus priority</p>
+                      <p className="text-sm font-bold uppercase tracking-wider">{filterLabels[pcmDrawFilter]}</p>
+                    </div>
+                    <svg className={`w-5 h-5 text-white/40 transition-transform ${isPcmDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {isPcmDropdownOpen && (
+                    <div className="absolute top-[calc(100%+12px)] left-0 right-0 bg-white dark:bg-slate-800 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.6)] border border-slate-200 dark:border-slate-700 p-2 z-[999] animate-dropdown">
+                      {(Object.keys(filterLabels) as (keyof typeof filterLabels)[]).map((key) => (
+                        <button
+                          key={key}
+                          onClick={() => { setPcmDrawFilter(key); setIsPcmDropdownOpen(false); }}
+                          className={`w-full text-left px-4 py-4 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all mb-1 last:mb-0 flex items-center justify-between ${
+                            pcmDrawFilter === key 
+                            ? 'bg-indigo-600 text-white shadow-lg' 
+                            : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
+                          {filterLabels[key]}
+                          {pcmDrawFilter === key && <div className="w-2 h-2 rounded-full bg-white shadow-sm" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={() => handleDrawPCM(pcmDrawFilter)}
+                  className="h-16 px-10 bg-indigo-500 hover:bg-indigo-400 text-white rounded-2xl font-black text-lg shadow-xl shadow-indigo-500/20 active-scale transition-all whitespace-nowrap"
+                >
+                  Draw from PCM 🍀
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Subject Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
+        {/* Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
           {(['Physics', 'Mathematics', 'Chemistry'] as Subject[]).map(subject => (
             <SubjectCard
               key={subject}
@@ -203,43 +233,22 @@ const App: React.FC = () => {
               completed={state.completedChapters[subject] || []}
               onDraw={handleDrawSubject}
               onToggleChapter={toggleChapter}
-              onReset={(s) => {
-                if(window.confirm(`Reset all progress for ${s}?`)) {
-                    setState(prev => ({ ...prev, completedChapters: { ...prev.completedChapters, [s]: [] } }));
-                }
-              }}
-              onAddChapter={(s, ch) => {
-                  setState(prev => {
-                      if (prev.allChapters[s].some(c => c.name === ch.name)) return prev;
-                      return { ...prev, allChapters: { ...prev.allChapters, [s]: [...prev.allChapters[s], ch] } };
-                  });
-              }}
-              onDeleteChapter={(s, name) => {
-                  setState(prev => ({
-                    ...prev,
-                    allChapters: { ...prev.allChapters, [s]: prev.allChapters[s].filter(c => c.name !== name) },
-                    completedChapters: { ...prev.completedChapters, [s]: prev.completedChapters[s].filter(c => c !== name) }
-                  }));
-              }}
-              onRestoreDefaults={(s) => {
-                  if(window.confirm(`Restore default chapter list for ${s}?`)) {
-                      setState(prev => ({ ...prev, allChapters: { ...prev.allChapters, [s]: [...PREDEFINED_CHAPTERS[s]] } }));
-                  }
-              }}
+              onReset={(s) => { if(confirm(`Reset ${s}?`)) setState(p => ({ ...p, completedChapters: { ...p.completedChapters, [s]: [] } })) }}
+              onAddChapter={(s, ch) => setState(p => ({ ...p, allChapters: { ...p.allChapters, [s]: [...p.allChapters[s], ch] } }))}
+              onDeleteChapter={(s, n) => setState(p => ({
+                ...p,
+                allChapters: { ...p.allChapters, [s]: p.allChapters[s].filter(c => c.name !== n) },
+                completedChapters: { ...p.completedChapters, [s]: p.completedChapters[s].filter(c => c !== n) }
+              }))}
+              onRestoreDefaults={(s) => { if(confirm(`Restore ${s}?`)) setState(p => ({ ...p, allChapters: { ...p.allChapters, [s]: [...PREDEFINED_CHAPTERS[s]] } })) }}
             />
           ))}
         </div>
       </main>
 
-      <footer className="mt-20 px-4 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-          </svg>
-          PROGRESS SYNCED
-        </div>
-        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Persistence is the key to success</p>
-        <h3 className="mt-4 font-black text-slate-800 text-3xl tracking-tighter italic">PADHAI KARLE BKL!</h3>
+      <footer className="mt-24 px-4 text-center">
+        <h3 className="font-black text-slate-800 dark:text-white text-5xl tracking-tighter italic mb-2">PADHAI KARLE BKL!</h3>
+        <p className="text-slate-400 dark:text-slate-600 font-bold text-[10px] uppercase tracking-[0.3em]">Consistency is the secret weapon</p>
       </footer>
 
       {activeDraw && (
@@ -247,15 +256,8 @@ const App: React.FC = () => {
           subject={activeDraw.subject}
           chapter={activeDraw.chapter}
           onClose={() => setActiveDraw(null)}
-          onComplete={() => {
-              toggleChapter(activeDraw.subject, activeDraw.chapter.name);
-              setActiveDraw(null);
-          }}
-          onRedraw={() => {
-              activeDraw.source.type === 'subject' 
-                ? handleDrawSubject(activeDraw.source.subject, activeDraw.source.filter)
-                : handleDrawPCM(activeDraw.source.filter);
-          }}
+          onComplete={() => { toggleChapter(activeDraw.subject, activeDraw.chapter.name); setActiveDraw(null); }}
+          onRedraw={() => { activeDraw.source.type === 'subject' ? handleDrawSubject(activeDraw.source.subject, activeDraw.source.filter) : handleDrawPCM(activeDraw.source.filter); }}
         />
       )}
     </div>
