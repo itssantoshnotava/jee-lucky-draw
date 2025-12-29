@@ -2,85 +2,46 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JEE Lucky Draw - Study Focus Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-          },
-        },
-      }
-    </script>
-    <script>
-      // Prevent FOUC (Flash of Unstyled Content) for Dark Mode
-      (function() {
-        const theme = localStorage.getItem('jee_lucky_draw_theme_v3');
-        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      })();
-    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --app-height: 100%;
-        }
-        
-        /* Smooth Global Transitions */
-        html.dark, html {
-            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        *, *::before, *::after {
-            transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                        border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                        color 0.2s ease;
-        }
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-        }
-
-        .dark body {
-            background-color: #020617;
         }
         
+        /* Premium Custom Scrollbar Styling */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
+            width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: rgba(0, 0, 0, 0.1);
             border-radius: 10px;
+            transition: background 0.2s;
         }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.2);
         }
         
-        @keyframes slideDownScale {
-            from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Animation for dropdown */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px) scale(0.98); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .animate-dropdown {
-            animation: slideDownScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            transform-origin: top;
-        }
-        
-        .active-scale:active {
-            transform: scale(0.96);
+        .dropdown-animate {
+            animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: top center;
         }
     </style>
 <script type="importmap">
@@ -97,6 +58,7 @@
 </head>
 <body>
     <div id="root"></div>
+    <!-- Vite entry point -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>
