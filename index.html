@@ -17,17 +17,31 @@
         },
       }
     </script>
+    <script>
+      // Prevent FOUC (Flash of Unstyled Content) for Dark Mode
+      (function() {
+        const theme = localStorage.getItem('jee_lucky_draw_theme_v3');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --app-height: 100%;
         }
         
-        /* Smooth Global Transitions for Theme Swapping */
-        html, body, div, section, header, button {
-            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                        border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                        box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        /* Smooth Global Transitions */
+        html.dark, html {
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after {
+            transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                        border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
                         color 0.2s ease;
         }
 
@@ -57,16 +71,16 @@
         }
         
         @keyframes slideDownScale {
-            from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+            from { opacity: 0; transform: translateY(-8px) scale(0.98); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .animate-dropdown {
-            animation: slideDownScale 0.2s cubic-bezier(0, 0, 0.2, 1);
+            animation: slideDownScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             transform-origin: top;
         }
         
         .active-scale:active {
-            transform: scale(0.97);
+            transform: scale(0.96);
         }
     </style>
 <script type="importmap">
